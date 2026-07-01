@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# runtime data (created at runtime; not committed)
+uploads/
+output/
+
+# misc
+.env
+*.log
+.DS_Store

@@ -1,0 +1,21 @@
+{
+  "name": "ai-video-creator",
+  "version": "1.0.0",
+  "description": "Free AI video creator - script + AI images + narration + captions, rendered to MP4",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "nanoid": "^5.0.7",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3"
+  }
+}

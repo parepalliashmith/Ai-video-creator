@@ -1,0 +1,20 @@
+# Render Blueprint — deploys the Free AI Video Creator as one web service.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: ai-video-creator
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: GEMINI_API_KEY    # free Google AI Studio key(s), comma-separated to rotate quota
+        sync: false
+      - key: PEXELS_API_KEY    # free, no card — stock-photo fallback when Gemini image quota is unavailable
+        sync: false
+      - key: HUGGINGFACE_API_KEY   # optional — enables the experimental AI clip mode
+        sync: false
