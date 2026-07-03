@@ -16,5 +16,3 @@ services:
         sync: false
       - key: PEXELS_API_KEY    # free, no card — stock-photo fallback when Gemini image quota is unavailable
         sync: false
-      - key: HUGGINGFACE_API_KEY   # optional — enables the experimental AI clip mode
-        sync: false

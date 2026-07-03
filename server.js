@@ -1,8 +1,11 @@
 // Free AI Video Creator — Node/Express server.
-// Mode A "Scene Video": topic -> AI script -> AI images (or uploaded photos)
-//   -> free narration -> ffmpeg render (Ken Burns + captions + optional music).
-// Mode B "Experimental AI Clip": true text-to-video, best-effort, via a free
-//   Hugging Face token — clearly labeled and gracefully degrades.
+// Scene Video: topic -> AI script -> AI images (or uploaded photos) ->
+// free narration -> ffmpeg render (Ken Burns + captions + optional music).
+//
+// (An experimental true text-to-video mode via Hugging Face's free
+// serverless Inference API was tried and removed: that free endpoint has
+// been retired, and its replacement gives free accounts only $0.10/month
+// of credit — nowhere near enough for a single video-gen call.)
 
 import express from 'express';
 import multer from 'multer';
@@ -13,7 +16,6 @@ import { nanoid } from 'nanoid';
 
 import * as gemini from './lib/gemini.js';
 import * as tts from './lib/tts.js';
-import * as hf from './lib/hf.js';
 import * as pexels from './lib/pexels.js';
 import { renderVideo } from './lib/render.js';
 
@@ -65,7 +67,6 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     geminiConfigured: gemini.isConfigured(),
-    hfConfigured: hf.isConfigured(),
     stockPhotoConfigured: pexels.isConfigured(),
   });
 });
@@ -162,38 +163,6 @@ async function runSceneJob(job, { topic, sceneCount, orientation, langCode, capt
   job.status = 'done';
   job.progress = 'done';
 }
-
-// ---------------------------------------------------------------------------
-// Mode B: Experimental AI Clip (best-effort true text-to-video)
-// ---------------------------------------------------------------------------
-app.get('/api/clip/status', (_req, res) => {
-  res.json({ enabled: hf.isConfigured() });
-});
-
-app.post('/api/clip', async (req, res) => {
-  if (!hf.isConfigured()) {
-    return res.status(503).json({ error: 'Experimental AI clip is not configured — add a free Hugging Face token (HUGGINGFACE_API_KEY) to enable it.' });
-  }
-  const prompt = (req.body.prompt || '').trim();
-  if (!prompt) return res.status(400).json({ error: 'Describe the clip you want.' });
-
-  const job = newJob('clip');
-  res.json({ jobId: job.id });
-  job.status = 'generating';
-  job.progress = 'requesting the free AI clip model (this can be slow)';
-  hf.generateClip(prompt)
-    .then((buffer) => {
-      const outPath = path.join(OUTPUT_DIR, `clip-${job.id}.mp4`);
-      fs.writeFileSync(outPath, buffer);
-      job.resultPath = outPath;
-      job.status = 'done';
-      job.progress = 'done';
-    })
-    .catch((e) => {
-      job.status = 'error';
-      job.error = e.message || 'Something went wrong.';
-    });
-});
 
 // ---------------------------------------------------------------------------
 // Shared job polling / download

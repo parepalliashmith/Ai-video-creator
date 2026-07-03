@@ -1,21 +1,6 @@
-// Free AI Video Creator — frontend: tabs, forms, job polling, result playback.
+// Free AI Video Creator — frontend: form, job polling, result playback.
 
 const $ = (sel) => document.querySelector(sel);
-
-// ---------------- Tabs ----------------
-document.querySelectorAll('.tab').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach((b) => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    const tab = btn.dataset.tab;
-    $('#panel-scene').hidden = tab !== 'scene';
-    $('#panel-clip').hidden = tab !== 'clip';
-  });
-});
 
 // ---------------- Segmented controls ----------------
 let orientation = 'landscape';
@@ -52,19 +37,8 @@ fetch('/api/health')
   })
   .catch(() => {});
 
-fetch('/api/clip/status')
-  .then((r) => r.json())
-  .then((s) => {
-    if (!s.enabled) {
-      $('#clip-submit').disabled = true;
-      $('#clip-config-hint').textContent =
-        'Not enabled — add a free Hugging Face token (HUGGINGFACE_API_KEY) on the server to try this experimental mode.';
-    }
-  })
-  .catch(() => {});
-
-// ---------------- Shared job polling ----------------
-function pollJob(jobId, { statusEl, textEl, onDone, onError }) {
+// ---------------- Job polling ----------------
+function pollJob(jobId, { textEl, onDone, onError }) {
   const tick = async () => {
     try {
       const r = await fetch(`/api/jobs/${jobId}/status`);
@@ -88,14 +62,13 @@ function describeProgress(status, progress) {
     images: 'Generating scene images…',
     narration: 'Recording narration…',
     rendering: 'Rendering your video…',
-    generating: 'Generating…',
     done: 'Done!',
   };
   const base = labels[status] || 'Working…';
   return progress && progress !== status ? `${base} (${progress})` : base;
 }
 
-// ---------------- Mode A: Scene Video ----------------
+// ---------------- Scene Video form ----------------
 const sceneForm = $('#scene-form');
 const sceneStatus = $('#scene-status');
 const sceneStatusText = $('#scene-status-text');
@@ -163,61 +136,3 @@ sceneForm.addEventListener('submit', async (e) => {
 
 $('#scene-retry').addEventListener('click', resetSceneUI);
 $('#scene-again').addEventListener('click', resetSceneUI);
-
-// ---------------- Mode B: Experimental AI Clip ----------------
-const clipForm = $('#clip-form');
-const clipStatus = $('#clip-status');
-const clipStatusText = $('#clip-status-text');
-const clipError = $('#clip-error');
-const clipResult = $('#clip-result');
-
-function resetClipUI() {
-  clipForm.hidden = false;
-  clipStatus.hidden = true;
-  clipError.hidden = true;
-  clipResult.hidden = true;
-}
-
-clipForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const prompt = $('#clip-prompt').value.trim();
-  if (!prompt) return;
-
-  clipForm.hidden = true;
-  clipError.hidden = true;
-  clipResult.hidden = true;
-  clipStatus.hidden = false;
-  clipStatusText.textContent = 'Starting…';
-
-  try {
-    const r = await fetch('/api/clip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Could not start the job.');
-    pollJob(data.jobId, {
-      textEl: clipStatusText,
-      onDone: (job) => {
-        clipStatus.hidden = true;
-        clipResult.hidden = false;
-        const fileUrl = `/api/jobs/${data.jobId}/file`;
-        $('#clip-video').src = fileUrl;
-        $('#clip-download').href = fileUrl;
-      },
-      onError: (msg) => {
-        clipStatus.hidden = true;
-        clipError.hidden = false;
-        $('#clip-error-text').textContent = msg;
-      },
-    });
-  } catch (err) {
-    clipStatus.hidden = true;
-    clipError.hidden = false;
-    $('#clip-error-text').textContent = err.message;
-  }
-});
-
-$('#clip-retry').addEventListener('click', resetClipUI);
-$('#clip-again').addEventListener('click', resetClipUI);
