@@ -122,6 +122,7 @@ sceneForm.addEventListener('submit', async (e) => {
   fd.append('imageSource', imageSource);
   fd.append('captionsOn', $('#captionsOn').checked);
   fd.append('addMusic', $('#addMusic').checked);
+  fd.append('fastMode', $('#fastMode').checked);
   if (imageSource === 'upload') {
     const files = $('#images').files;
     for (const f of files) fd.append('images', f);
