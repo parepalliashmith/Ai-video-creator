@@ -14,32 +14,39 @@
     <span class="brand-icon">🎬</span>
     <span>Free AI Video Creator</span>
   </div>
-  <div class="brand-sub">Script → AI images → narration → captions, rendered to MP4. 100% free tier.</div>
+  <div class="brand-sub">Type an idea, get a narrated video. 100% free — no account needed.</div>
 </header>
 
 <main class="wrap">
-  <!-- ================= SCENE VIDEO ================= -->
   <section class="panel" id="panel-scene">
     <form id="scene-form" class="card">
       <label class="field">
-        <span>Topic or script</span>
+        <span>What's your video about?</span>
         <textarea id="topic" rows="3" placeholder="e.g. The history of coffee, in a fun and simple way" required></textarea>
       </label>
 
+      <div class="chips" id="topic-chips">
+        <button type="button" class="chip" data-topic="Why cats purr">🐱 Why cats purr</button>
+        <button type="button" class="chip" data-topic="The history of coffee">☕ History of coffee</button>
+        <button type="button" class="chip" data-topic="Fun facts about space">🚀 Fun facts about space</button>
+        <button type="button" class="chip" data-topic="How volcanoes form">🌋 How volcanoes form</button>
+        <button type="button" class="chip" data-topic="Health benefits of drinking water">💧 Benefits of water</button>
+      </div>
+
       <div class="row">
         <label class="field">
-          <span>Scenes</span>
+          <span>How many scenes?</span>
           <select id="sceneCount">
-            <option value="3">3</option>
+            <option value="3">3 (shortest)</option>
             <option value="4">4</option>
             <option value="5" selected>5</option>
             <option value="6">6</option>
-            <option value="8">8</option>
+            <option value="8">8 (longest)</option>
           </select>
         </label>
 
         <label class="field">
-          <span>Language</span>
+          <span>Voice language</span>
           <select id="lang">
             <option value="en" selected>English</option>
             <option value="te">Telugu</option>
@@ -49,59 +56,71 @@
       </div>
 
       <div class="field">
-        <span>Orientation</span>
+        <span>Shape</span>
         <div class="seg">
-          <button type="button" class="seg-btn active" data-orientation="landscape">▭ Landscape 16:9</button>
-          <button type="button" class="seg-btn" data-orientation="portrait">▯ Portrait 9:16</button>
+          <button type="button" class="seg-btn active" data-orientation="landscape">▭ Wide (YouTube, TV)</button>
+          <button type="button" class="seg-btn" data-orientation="portrait">▯ Tall (Reels, Shorts)</button>
         </div>
       </div>
 
       <div class="field">
-        <span>Scene images</span>
+        <span>Pictures</span>
         <div class="seg">
-          <button type="button" class="seg-btn active" data-imgsrc="ai">✨ AI-generated</button>
-          <button type="button" class="seg-btn" data-imgsrc="upload">📷 Upload my photos</button>
+          <button type="button" class="seg-btn active" data-imgsrc="ai">✨ Let AI create them</button>
+          <button type="button" class="seg-btn" data-imgsrc="upload">📷 Use my own photos</button>
         </div>
       </div>
 
       <label class="field" id="upload-field" hidden>
-        <span>Photos (used in order, one per scene)</span>
+        <span>Your photos (used in order, one per scene)</span>
         <input type="file" id="images" accept="image/*" multiple />
       </label>
 
       <div class="row toggles">
-        <label class="check"><input type="checkbox" id="captionsOn" checked /> Burned-in captions</label>
-        <label class="check"><input type="checkbox" id="addMusic" /> Soft background music (generated, royalty-free)</label>
-        <label class="check"><input type="checkbox" id="fastMode" /> Fast render (skip crossfades — hard cuts, much quicker on the free server)</label>
+        <label class="check"><input type="checkbox" id="captionsOn" checked /> Show captions on screen</label>
+        <label class="check"><input type="checkbox" id="addMusic" /> Add soft background music</label>
       </div>
 
-      <button type="submit" class="primary" id="scene-submit">Create video</button>
+      <div class="field">
+        <span>Speed</span>
+        <div class="seg">
+          <button type="button" class="seg-btn" data-speed="cinematic">🎬 Smooth (looks nicer, slower)</button>
+          <button type="button" class="seg-btn active" data-speed="quick">⚡ Quick (simple cuts, faster)</button>
+        </div>
+      </div>
+
+      <button type="submit" class="primary" id="scene-submit">✨ Create my video</button>
       <p class="hint" id="scene-config-hint"></p>
     </form>
 
     <div class="card status-card" id="scene-status" hidden>
       <div class="spinner"></div>
-      <div class="status-text" id="scene-status-text">Starting…</div>
-      <div class="progress-bar"><div class="progress-fill" id="scene-progress-fill"></div></div>
+      <ul class="steps" id="scene-steps">
+        <li data-step="script"><span class="step-icon"></span> Writing the story</li>
+        <li data-step="images"><span class="step-icon"></span> Drawing the pictures</li>
+        <li data-step="narration"><span class="step-icon"></span> Recording the voice</li>
+        <li data-step="rendering"><span class="step-icon"></span> Putting the video together</li>
+      </ul>
+      <div class="status-sub" id="scene-status-sub">This usually takes a couple of minutes — feel free to wait here.</div>
     </div>
 
     <div class="card error-card" id="scene-error" hidden>
-      <p id="scene-error-text"></p>
+      <p>😕 <span id="scene-error-text"></span></p>
       <button class="secondary" id="scene-retry">Try again</button>
     </div>
 
     <div class="card result-card" id="scene-result" hidden>
-      <h3 id="scene-result-title">Your video</h3>
+      <h3 id="scene-result-title">🎉 Your video is ready!</h3>
       <video id="scene-video" controls playsinline></video>
       <div class="result-actions">
-        <a class="primary" id="scene-download" download>Download MP4</a>
-        <button class="secondary" id="scene-again">Create another</button>
+        <a class="primary" id="scene-download" download>⬇ Download video</a>
+        <button class="secondary" id="scene-again">Make another one</button>
       </div>
     </div>
   </section>
 </main>
 
-<footer class="foot">Built for zero cost — free Gemini script/image generation, free browser-grade narration, procedurally generated music. No account needed.</footer>
+<footer class="foot">Built for zero cost — free Gemini script/image generation, free narration, procedurally generated music. No account needed.</footer>
 
 <script src="app.js"></script>
 </body>

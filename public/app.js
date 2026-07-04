@@ -22,6 +22,24 @@ document.querySelectorAll('[data-imgsrc]').forEach((btn) => {
   });
 });
 
+// Quick = fast render (hard cuts); Smooth = crossfade transitions.
+let fastMode = true;
+document.querySelectorAll('[data-speed]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    fastMode = btn.dataset.speed === 'quick';
+  });
+});
+
+// ---------------- Example topic chips ----------------
+document.querySelectorAll('#topic-chips .chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    $('#topic').value = chip.dataset.topic;
+    $('#topic').focus();
+  });
+});
+
 // ---------------- Health check ----------------
 fetch('/api/health')
   .then((r) => r.json())
@@ -29,23 +47,38 @@ fetch('/api/health')
     if (!health.geminiConfigured) {
       $('#scene-submit').disabled = true;
       $('#scene-config-hint').textContent =
-        'Video AI is not configured yet — the server needs a free GEMINI_API_KEY.';
+        'This site is still being set up (missing a free API key) — please check back soon.';
     } else if (!health.stockPhotoConfigured) {
       $('#scene-config-hint').textContent =
-        'Tip: AI-generated images can hit free-tier limits — add a free PEXELS_API_KEY on the server for an automatic stock-photo fallback, or use "Upload my photos".';
+        "Tip: if AI picture generation is busy, switch to \"Use my own photos\" for an instant alternative.";
     }
   })
   .catch(() => {});
 
-// ---------------- Job polling ----------------
-function pollJob(jobId, { textEl, onDone, onError }) {
+// ---------------- Job polling with a step checklist ----------------
+const STEP_ORDER = ['script', 'images', 'narration', 'rendering'];
+
+function updateSteps(status) {
+  const currentIndex = STEP_ORDER.indexOf(status);
+  document.querySelectorAll('#scene-steps li').forEach((li) => {
+    const stepIndex = STEP_ORDER.indexOf(li.dataset.step);
+    li.classList.remove('step-done', 'step-active');
+    if (status === 'done' || (currentIndex !== -1 && stepIndex < currentIndex)) {
+      li.classList.add('step-done');
+    } else if (stepIndex === currentIndex) {
+      li.classList.add('step-active');
+    }
+  });
+}
+
+function pollJob(jobId, { onProgress, onDone, onError }) {
   const tick = async () => {
     try {
       const r = await fetch(`/api/jobs/${jobId}/status`);
-      if (!r.ok) throw new Error((await r.json()).error || 'Job not found.');
+      if (!r.ok) throw new Error((await r.json()).error || "Couldn't find that job — please try again.");
       const data = await r.json();
       if (data.error) return onError(data.error);
-      if (textEl) textEl.textContent = describeProgress(data.status, data.progress);
+      onProgress?.(data.status, data.progress);
       if (data.ready) return onDone(data);
       setTimeout(tick, 1800);
     } catch (e) {
@@ -55,31 +88,32 @@ function pollJob(jobId, { textEl, onDone, onError }) {
   tick();
 }
 
-function describeProgress(status, progress) {
-  const labels = {
-    queued: 'Queued…',
-    script: 'Writing the script…',
-    images: 'Generating scene images…',
-    narration: 'Recording narration…',
-    rendering: 'Rendering your video…',
-    done: 'Done!',
-  };
-  const base = labels[status] || 'Working…';
-  return progress && progress !== status ? `${base} (${progress})` : base;
-}
-
 // ---------------- Scene Video form ----------------
 const sceneForm = $('#scene-form');
 const sceneStatus = $('#scene-status');
-const sceneStatusText = $('#scene-status-text');
+const sceneStatusSub = $('#scene-status-sub');
 const sceneError = $('#scene-error');
 const sceneResult = $('#scene-result');
+
+let elapsedTimer = null;
+function startElapsedTimer() {
+  const start = Date.now();
+  elapsedTimer = setInterval(() => {
+    const secs = Math.round((Date.now() - start) / 1000);
+    sceneStatusSub.textContent = `Still working… ${secs}s elapsed. Thanks for your patience!`;
+  }, 1000);
+}
+function stopElapsedTimer() {
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  elapsedTimer = null;
+}
 
 function resetSceneUI() {
   sceneForm.hidden = false;
   sceneStatus.hidden = true;
   sceneError.hidden = true;
   sceneResult.hidden = true;
+  stopElapsedTimer();
 }
 
 sceneForm.addEventListener('submit', async (e) => {
@@ -95,7 +129,7 @@ sceneForm.addEventListener('submit', async (e) => {
   fd.append('imageSource', imageSource);
   fd.append('captionsOn', $('#captionsOn').checked);
   fd.append('addMusic', $('#addMusic').checked);
-  fd.append('fastMode', $('#fastMode').checked);
+  fd.append('fastMode', fastMode);
   if (imageSource === 'upload') {
     const files = $('#images').files;
     for (const f of files) fd.append('images', f);
@@ -105,29 +139,34 @@ sceneForm.addEventListener('submit', async (e) => {
   sceneError.hidden = true;
   sceneResult.hidden = true;
   sceneStatus.hidden = false;
-  sceneStatusText.textContent = 'Starting…';
+  updateSteps('script');
+  sceneStatusSub.textContent = 'This usually takes a couple of minutes — feel free to wait here.';
+  startElapsedTimer();
 
   try {
     const r = await fetch('/api/video', { method: 'POST', body: fd });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Could not start the job.');
+    if (!r.ok) throw new Error(data.error || 'Could not start the video. Please try again.');
     pollJob(data.jobId, {
-      textEl: sceneStatusText,
+      onProgress: (status) => updateSteps(status),
       onDone: async (job) => {
+        stopElapsedTimer();
         sceneStatus.hidden = true;
         sceneResult.hidden = false;
-        $('#scene-result-title').textContent = job.title || 'Your video';
+        $('#scene-result-title').textContent = job.title ? `🎉 "${job.title}" is ready!` : '🎉 Your video is ready!';
         const fileUrl = `/api/jobs/${data.jobId}/file`;
         $('#scene-video').src = fileUrl;
         $('#scene-download').href = fileUrl;
       },
       onError: (msg) => {
+        stopElapsedTimer();
         sceneStatus.hidden = true;
         sceneError.hidden = false;
         $('#scene-error-text').textContent = msg;
       },
     });
   } catch (err) {
+    stopElapsedTimer();
     sceneStatus.hidden = true;
     sceneError.hidden = false;
     $('#scene-error-text').textContent = err.message;
