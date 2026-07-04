@@ -18,6 +18,12 @@
 </header>
 
 <main class="wrap">
+  <section class="card recent-card" id="recent-section" hidden>
+    <h4>🕘 Recent videos</h4>
+    <p class="hint" style="margin:0 0 12px">Free hosting doesn't keep old videos long — if one's expired, just tap "Make again".</p>
+    <ul class="recent-list" id="recent-list"></ul>
+  </section>
+
   <section class="panel" id="panel-scene">
     <form id="scene-form" class="card">
       <label class="field">
@@ -80,6 +86,15 @@
         <label class="check"><input type="checkbox" id="captionsOn" checked /> Show captions on screen</label>
         <label class="check"><input type="checkbox" id="addMusic" /> Add soft background music</label>
       </div>
+
+      <label class="field" id="mood-field" hidden>
+        <span>Music mood</span>
+        <select id="musicMood">
+          <option value="calm" selected>🎐 Calm</option>
+          <option value="upbeat">🎉 Upbeat</option>
+          <option value="dramatic">🎭 Dramatic</option>
+        </select>
+      </label>
 
       <div class="field">
         <span>Speed</span>

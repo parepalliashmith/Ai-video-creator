@@ -254,6 +254,41 @@ button.secondary {
 }
 .result-actions a, .result-actions button { margin-top: 10px; }
 
+.recent-card h4 { margin: 0 0 6px; font-size: 15px; }
+.recent-list { list-style: none; margin: 0; padding: 0; }
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+.recent-item:first-child { border-top: none; }
+.recent-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.recent-info strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.recent-time { font-size: 11px; color: var(--muted); }
+.recent-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.recent-link {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.recent-link:hover { border-color: var(--accent1); }
+
 .foot {
   text-align: center;
   color: var(--muted);

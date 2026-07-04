@@ -86,6 +86,7 @@ app.post('/api/video', upload.array('images', 20), async (req, res) => {
   const langCode = LANGUAGES[req.body.lang] ? req.body.lang : 'en';
   const captionsOn = req.body.captionsOn !== 'false';
   const addMusic = req.body.addMusic === 'true';
+  const musicMood = ['calm', 'upbeat', 'dramatic'].includes(req.body.musicMood) ? req.body.musicMood : 'calm';
   const fastMode = req.body.fastMode === 'true';
   const imageSource = req.body.imageSource === 'upload' ? 'upload' : 'ai';
   const uploadedImages = req.files || [];
@@ -96,13 +97,13 @@ app.post('/api/video', upload.array('images', 20), async (req, res) => {
 
   const job = newJob('scene');
   res.json({ jobId: job.id });
-  runSceneJob(job, { topic, sceneCount, orientation, langCode, captionsOn, addMusic, fastMode, imageSource, uploadedImages }).catch((e) => {
+  runSceneJob(job, { topic, sceneCount, orientation, langCode, captionsOn, addMusic, musicMood, fastMode, imageSource, uploadedImages }).catch((e) => {
     job.status = 'error';
     job.error = e.message || 'Something went wrong.';
   });
 });
 
-async function runSceneJob(job, { topic, sceneCount, orientation, langCode, captionsOn, addMusic, fastMode, imageSource, uploadedImages }) {
+async function runSceneJob(job, { topic, sceneCount, orientation, langCode, captionsOn, addMusic, musicMood, fastMode, imageSource, uploadedImages }) {
   const workDir = path.join(WORK_ROOT, job.id);
   fs.mkdirSync(workDir, { recursive: true });
 
@@ -150,6 +151,7 @@ async function runSceneJob(job, { topic, sceneCount, orientation, langCode, capt
     scenes,
     orientation,
     addMusic,
+    musicMood,
     fastMode,
     workDir,
     outPath,

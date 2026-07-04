@@ -40,6 +40,11 @@ document.querySelectorAll('#topic-chips .chip').forEach((chip) => {
   });
 });
 
+// ---------------- Music mood (only relevant if music is on) ----------------
+$('#addMusic').addEventListener('change', () => {
+  $('#mood-field').hidden = !$('#addMusic').checked;
+});
+
 // ---------------- Health check ----------------
 fetch('/api/health')
   .then((r) => r.json())
@@ -88,6 +93,85 @@ function pollJob(jobId, { onProgress, onDone, onError }) {
   tick();
 }
 
+// ---------------- Recent videos (client-side history, localStorage only) ----------------
+const RECENT_KEY = 'aivc_recent_videos';
+const MAX_RECENT = 5;
+
+function loadRecent() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(list) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT)));
+}
+
+function addRecent(entry) {
+  const list = loadRecent();
+  list.unshift(entry);
+  saveRecent(list);
+  renderRecentList();
+}
+
+function timeAgo(ts) {
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+function fillFormFromSettings(s) {
+  $('#topic').value = s.topic || '';
+  $('#sceneCount').value = s.sceneCount;
+  $('#lang').value = s.lang;
+  $('#captionsOn').checked = s.captionsOn;
+  $('#addMusic').checked = s.addMusic;
+  $('#musicMood').value = s.musicMood || 'calm';
+  $('#mood-field').hidden = !s.addMusic;
+
+  orientation = s.orientation;
+  document.querySelectorAll('[data-orientation]').forEach((b) => b.classList.toggle('active', b.dataset.orientation === orientation));
+  fastMode = s.fastMode;
+  document.querySelectorAll('[data-speed]').forEach((b) => b.classList.toggle('active', (b.dataset.speed === 'quick') === fastMode));
+  // Uploaded photos can't be restored — recreate with AI images instead.
+  imageSource = 'ai';
+  document.querySelectorAll('[data-imgsrc]').forEach((b) => b.classList.toggle('active', b.dataset.imgsrc === 'ai'));
+  $('#upload-field').hidden = true;
+}
+
+function renderRecentList() {
+  const list = loadRecent();
+  const section = $('#recent-section');
+  const ul = $('#recent-list');
+  section.hidden = list.length === 0;
+  ul.innerHTML = '';
+  list.forEach((entry) => {
+    const li = document.createElement('li');
+    li.className = 'recent-item';
+    li.innerHTML = `
+      <div class="recent-info">
+        <strong>${entry.title || entry.topic}</strong>
+        <span class="recent-time">${timeAgo(entry.createdAt)}</span>
+      </div>
+      <div class="recent-actions">
+        <a href="/api/jobs/${entry.jobId}/file" class="recent-link" download>⬇ Download</a>
+        <button type="button" class="recent-link recent-again">🔁 Make again</button>
+      </div>`;
+    li.querySelector('.recent-again').addEventListener('click', () => {
+      fillFormFromSettings(entry);
+      sceneForm.scrollIntoView({ behavior: 'smooth' });
+    });
+    ul.appendChild(li);
+  });
+}
+
+renderRecentList();
+
 // ---------------- Scene Video form ----------------
 const sceneForm = $('#scene-form');
 const sceneStatus = $('#scene-status');
@@ -129,11 +213,23 @@ sceneForm.addEventListener('submit', async (e) => {
   fd.append('imageSource', imageSource);
   fd.append('captionsOn', $('#captionsOn').checked);
   fd.append('addMusic', $('#addMusic').checked);
+  fd.append('musicMood', $('#musicMood').value);
   fd.append('fastMode', fastMode);
   if (imageSource === 'upload') {
     const files = $('#images').files;
     for (const f of files) fd.append('images', f);
   }
+
+  const settingsSnapshot = {
+    topic,
+    sceneCount: $('#sceneCount').value,
+    lang: $('#lang').value,
+    orientation,
+    captionsOn: $('#captionsOn').checked,
+    addMusic: $('#addMusic').checked,
+    musicMood: $('#musicMood').value,
+    fastMode,
+  };
 
   sceneForm.hidden = true;
   sceneError.hidden = true;
@@ -157,6 +253,7 @@ sceneForm.addEventListener('submit', async (e) => {
         const fileUrl = `/api/jobs/${data.jobId}/file`;
         $('#scene-video').src = fileUrl;
         $('#scene-download').href = fileUrl;
+        addRecent({ ...settingsSnapshot, jobId: data.jobId, title: job.title, createdAt: Date.now() });
       },
       onError: (msg) => {
         stopElapsedTimer();
